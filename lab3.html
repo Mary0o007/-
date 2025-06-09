@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>VK Friends</title>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+</head>
+<body>
+    <h1>Список друзей ВКонтакте</h1>
+
+    <label for="city-filter">Фильтр по городу:</label>
+    <select id="city-filter">
+        <option value="all">Все</option>
+    </select>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Имя</th>
+                <th>Фамилия</th>
+                <th>Город</th>
+            </tr>
+        </thead>
+        <tbody id="friends-list"></tbody>
+    </table>
+
+    <script>
+        var access_token = ""; // Вставьте  токен
+        var user_id = 0; // ID пользователя
+        var api_version = "5.199";
+
+        $.ajax({
+            url: "https://api.vk.com/method/friends.get",
+            dataType: "jsonp",
+            data: {
+                access_token: access_token,
+                v: api_version,
+                user_id: user_id,
+                fields: "first_name,last_name,city",
+            },
+            success: function(response) {
+                if (response.response) {
+                    var friends = response.response.items;
+                    let cities = new Set();
+                    var tableBody = "";
+
+                    friends.forEach(function(friend) {
+                        let city = friend.city ? friend.city.title : "Бездомный";
+                        cities.add(city);
+
+                        tableBody += `<tr data-city="${city}">
+                                <td>${friend.id}</td>
+                                <td>${friend.first_name}</td>
+                                <td>${friend.last_name}</td>
+                                <td>${city}</td>
+                            </tr>`;
+                        console.log(friend)
+                    });
+                    $("#friends-list").html(tableBody);
+
+                    updateCityFilter(cities)
+                } else {
+                    console.error("Ошибка VK API:", response);
+                }
+            }
+        });
+        function updateCityFilter(cities) {
+            let cityFilter = $("#city-filter");
+            cityFilter.empty();
+            cityFilter.append(`<option value="all">Все</option>`);
+
+            cities.forEach(city => {
+                cityFilter.append(`<option value="${city}">${city}</option>`);
+            });
+
+            cityFilter.change(filterFriends);
+        }
+
+        function filterFriends() {
+            let selectedCity = $("#city-filter").val();
+            $("tbody tr").each(function() {
+                let rowCity = $(this).data("city");
+                if (selectedCity === "all" || rowCity === selectedCity) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+
+        $(document).ready(fetchFriends);
+    </script>
+</body>
+</html>

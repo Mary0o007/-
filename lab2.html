@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Парсинг XML с JavaScript</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Отображение элементов XML</h1>
+    
+    <!-- Поле ввода для выбора количества объектов второго уровня -->
+    <label for="numberOfBooks">Введите количество объектов второго уровня:</label>
+    <input type="number" id="numberOfBooks" min="1" value="1">
+    
+    <button onclick="displayElements()">Показать элементы третьего уровня</button>
+    
+    <div id="output"></div>
+
+    <script>
+        function displayElements() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'lab1.xml', false);
+            xhr.send();
+
+            if (xhr.status !== 200) {
+                alert(`Ошибка ${xhr.status}: ${xhr.statusText}`);
+                return;
+            }
+
+            const xmlDoc = xhr.responseXML;
+            const numberOfBooks = document.getElementById('numberOfBooks').value;
+            const elements = xmlDoc.getElementsByTagName('book');
+            
+            
+            if (numberOfBooks < 1 || numberOfBooks > elements.length) {
+                alert('Некорректное количество элементов второго уровня.');
+                return;
+            }
+
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            let allThirdLevelElements = ''; 
+
+            
+            for (let i = 0; i < numberOfBooks; i++) {
+                const selectedElement = elements[i];
+                allThirdLevelElements += `<h2>Элементы третьего уровня для книги ${i + 1}:</h2>`;
+
+                const thirdLevelElements = selectedElement.children;
+                
+                if (thirdLevelElements.length === 0) {
+                    allThirdLevelElements += '<p>Нет элементов третьего уровня для этой книги.</p>';
+                } else {
+                    //  таблица для каждого элемента второго уровня
+                    let table = '<table>';
+                    table += '<tr><th>Тег</th><th>Содержание</th></tr>';  
+
+                    for (const elem of thirdLevelElements) {
+                        table += `<tr><td>${elem.tagName}</td><td>${elem.textContent}</td></tr>`;
+                    }
+
+                    table += '</table>';
+                    allThirdLevelElements += table;
+                }
+            }
+
+        
+            output.innerHTML = allThirdLevelElements;
+        }
+    </script>
+</body>
+</html>
