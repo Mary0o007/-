@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VK API - Друзья участников группы</title>
+</head>
+<body>
+    <h2>VK API - Друзья участников группы</h2>
+    
+    <label for="groupId">Введите ID группы или встречи:</label>
+    <input type="text" id="groupId" placeholder="Например, 12345678"><br><br>
+    
+    <label for="limit">Введите количество аккаунтов:</label>
+    <input type="number" id="limit" min="1" value="10"><br><br>
+
+    <button onclick="fetchFriendsOfGroupMembers()">Получить список друзей</button>
+    
+    <h3>Результат:</h3>
+    <pre id="output"></pre>
+
+    <script>
+        const accessToken = ""; 
+
+        function vkApiRequest(method, params) {
+            return new Promise((resolve, reject) => {
+                const callbackName = "jsonpCallback_" + Math.random().toString(36).substr(2, 9);
+                params["callback"] = callbackName;
+                params["access_token"] = accessToken;
+                params["v"] = "5.131";
+
+                const script = document.createElement("script");
+                script.src = `https://api.vk.com/method/${method}?${new URLSearchParams(params)}`;
+                
+                window[callbackName] = function(data) {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    data.error ? reject(data.error) : resolve(data.response);
+                };
+
+                document.body.appendChild(script);
+            });
+        }
+
+        async function getGroupId(groupIdentifier) {
+            let data = await vkApiRequest("groups.getById", { group_id: groupIdentifier });
+            return data[0]?.id;
+        }
+
+        async function getUserInfo(userIds) {
+            let data = await vkApiRequest("users.get", { user_ids: userIds.join(","), fields: "first_name,last_name" });
+            return Object.fromEntries(data.map(user => [user.id, `${user.first_name} ${user.last_name}`]));
+        }
+
+        async function fetchFriendsOfGroupMembers() {
+            const groupIdentifier = document.getElementById("groupId").value.trim();
+            const limit = parseInt(document.getElementById("limit").value, 10);
+            if (!groupIdentifier) return alert("Введите ID группы!");
+            if (limit < 1) return alert("Введите корректное число!");
+
+            document.getElementById("output").textContent = "Загрузка...";
+
+            try {
+                let groupId = await getGroupId(groupIdentifier);
+                if (!groupId) throw new Error("Ошибка: не удалось получить ID группы.");
+
+                let membersData = await vkApiRequest("groups.getMembers", { group_id: groupId, count: limit });
+                let members = membersData.items.slice(0, limit);
+                let membersInfo = await getUserInfo(members);
+
+                let friendsList = [];
+                let collectedFriends = new Set();
+
+                for (let userId of members) {
+                    if (collectedFriends.size >= limit) break;
+                    
+                    let friendsData = await vkApiRequest("friends.get", { user_id: userId }).catch(() => null);
+                    if (!friendsData || !friendsData.items) continue;
+
+                    let friendsToAdd = friendsData.items.filter(friendId => !collectedFriends.has(friendId)).slice(0, limit - collectedFriends.size);
+                    friendsToAdd.forEach(friendId => collectedFriends.add(friendId));
+                    
+                    let friendsInfo = await getUserInfo(friendsToAdd);
+                    
+                    friendsList.push({
+                        userId: userId,
+                        userName: membersInfo[userId],
+                        friends: friendsToAdd.map(friendId => ({
+                            id: friendId,
+                            name: friendsInfo[friendId] || "Неизвестный"
+                        }))
+                    });
+
+                    if (collectedFriends.size >= limit) break;
+                }
+
+                let outputText = `Найдено друзей: ${collectedFriends.size}\n\n`;
+
+                let friendCount = 1;
+                friendsList.forEach((user, index) => {
+                    outputText += `${index + 1}. ${user.userId} ${user.userName}\nЕго друзья:\n`;
+                    user.friends.forEach(friend => {
+                        outputText += `${friendCount}) ${friend.id} ${friend.name}\n`;
+                        friendCount++;
+                    });
+                    outputText += "\n";
+                });
+
+                document.getElementById("output").textContent = outputText;
+            } catch (error) {
+                console.error("Ошибка:", error);
+                document.getElementById("output").textContent = "Ошибка при загрузке данных.";
+            }
+        }
+    </script>
+</body>
+</html>

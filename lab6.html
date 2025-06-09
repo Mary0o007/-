@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ЛР6: Async/Await</title>
+</head>
+<body>
+  <h2>Лабораторная работа №6 — Async/Await</h2>
+  <script>
+    const token = 'ACCESS_TOKEN';
+
+    async function showGroupStats() {
+      const group_ids = ['1', '2', '3'];
+      let stats = [];
+
+      for (const id of group_ids) {
+        const group = await fetch(`https://api.vk.com/method/groups.getById?group_id=${id}&access_token=${token}&v=5.131`)
+          .then(res => res.json()).then(data => data.response[0]);
+        const members = await fetch(`https://api.vk.com/method/groups.getMembers?group_id=${id}&access_token=${token}&v=5.131`)
+          .then(res => res.json()).then(data => data.response.count);
+        stats.push(`${group.name}: ${members} участников`);
+      }
+
+      alert(stats.join('\n'));
+    }
+  </script>
+  <button onclick="showGroupStats()">Показать статистику по группам</button>
+</body>
+</html>
