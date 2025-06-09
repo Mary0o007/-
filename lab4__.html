@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VK API Действия с JSONP</title>
+</head>
+<body>
+    <h2>VK API Действия</h2>
+    <button onclick="commentPost()">Оставить комментарий</button>
+    <button onclick="likePost()">Лайкнуть пост</button>
+    <button onclick="showComments()">Показать комментарии</button>
+
+    <script>
+        const accessToken = "";  
+        const userId = "";  
+
+        function jsonpRequest(url, callback) {
+            const script = document.createElement('script');
+            script.src = url + `&callback=${callback}`;
+            document.body.appendChild(script);
+        }
+
+        function showComments() {
+            const ownerId = prompt("Введите ID владельца поста:");
+            if (!ownerId) return alert("ID владельца поста не может быть пустым!");
+
+            const postId = prompt("Введите ID поста, к которому хотите показать комментарии:");
+            if (!postId) return alert("ID поста не может быть пустым!");
+
+            const proxyUrl = "https://cors-anywhere.herokuapp.com/"; 
+            const apiUrl = `https://api.vk.com/method/wall.getComments?owner_id=${ownerId}&post_id=${postId}&count=100&access_token=${accessToken}&v=5.131`;
+
+            jsonpRequest(proxyUrl + apiUrl, "handleCommentsResponse");
+        }
+
+        function handleCommentsResponse(response) {
+            if (response.error) {
+                alert(`Ошибка: ${response.error.error_msg}`);
+                return;
+            }
+
+            const comments = response.response.items;
+            if (comments.length === 0) {
+                alert("Комментариев нет.");
+            } else {
+                const commentsList = comments.map(comment => `<li>${comment.text}</li>`).join('');
+                document.body.innerHTML += `<ul>${commentsList}</ul>`;
+            }
+        }
+
+        function commentPost() {
+            const ownerId = prompt("Введите ID владельца поста:");
+            if (!ownerId) return alert("ID владельца поста не может быть пустым!");
+
+            const postId = prompt("Введите ID поста, к которому хотите оставить комментарий:");
+            if (!postId) return alert("ID поста не может быть пустым!");
+
+            const message = prompt("Введите текст комментария:");
+            if (!message) return alert("Текст комментария не может быть пустым!");
+
+            const apiUrl = `https://api.vk.com/method/wall.createComment?owner_id=${ownerId}&post_id=${postId}&message=${message}&access_token=${accessToken}&v=5.131`;
+
+            jsonpRequest(apiUrl, "handleCommentPostResponse");
+        }
+
+        function handleCommentPostResponse(response) {
+            if (response.error) {
+                alert(`Ошибка: ${response.error.error_msg}`);
+            } else {
+                alert("Комментарий успешно добавлен!");
+            }
+        }
+
+        function likePost() {
+            const ownerId = prompt("Введите ID владельца поста:");
+            if (!ownerId) return alert("ID владельца поста не может быть пустым!");
+
+            const postId = prompt("Введите ID поста:");
+            if (!postId) return alert("ID поста не может быть пустым!");
+
+            const apiUrl = `https://api.vk.com/method/likes.add?type=post&owner_id=${ownerId}&item_id=${postId}&access_token=${accessToken}&v=5.131`;
+
+            jsonpRequest(apiUrl, "handleLikePostResponse");
+        }
+
+        function handleLikePostResponse(response) {
+            if (response.error) {
+                alert(`Ошибка: ${response.error.error_msg}`);
+            } else {
+                alert("Пост лайкнут!");
+            }
+        }
+    </script>
+</body>
+</html>
